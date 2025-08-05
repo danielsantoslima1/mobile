@@ -7,7 +7,7 @@ import axios from "axios";
 import * as Notifications from "expo-notifications";
 import { useContext, useEffect, useState } from "react";
 import "react-native-gesture-handler";
-import { BASE_API } from "./src/constants/api";
+import { BASE_API_REGISTER_DEVICE } from "./src/constants/api";
 import {
   AuthContext,
   AuthProvider,
@@ -60,12 +60,14 @@ function AppContent() {
           parsedValue.deviceKey &&
           expoPushTokenResponse?.data
         ) {
+          console.log("Entrando no registro");
+
           const deviceObj = {
             uuid: parsedValue.deviceKey,
             token: expoPushTokenResponse?.data,
           };
 
-          await axios.post(`${BASE_API}/leitor/registrar`, deviceObj);
+          await axios.post(BASE_API_REGISTER_DEVICE, deviceObj);
         }
       } catch (error: any) {
         console.warn(error.message);

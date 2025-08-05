@@ -158,24 +158,27 @@ const HomeScreen = ({ navigation }: homeScreenProps) => {
                 <TouchableOpacity
                   style={style.itemTouchable}
                   onPress={() => {
-                    if (item.titulo.includes("Classificadores")) {
-                      navigation.navigate("ClassificatorItem", {
-                        classificadorId: item.id,
-                      });
-                    } else {
-                      navigation.navigate("BulletimItem", {
-                        boletimId: item.id,
-                      });
-                    }
-                    // if (item.tipo === 1 || item.tipo === 2) {
-                    //   navigation.navigate("BulletimItem", {
-                    //     boletimId: item.id,
-                    //   });
-                    // } else {
+                    // if (item.titulo.includes("Classificadores")) {
                     //   navigation.navigate("ClassificatorItem", {
                     //     classificadorId: item.id,
                     //   });
+                    // } else {
+                    //   navigation.navigate("BulletimItem", {
+                    //     boletimId: item.id,
+                    //   });
                     // }
+                    if (
+                      item.boletim_tipo_id === 1 ||
+                      item.item.boletim_tipo_id === 2
+                    ) {
+                      navigation.navigate("BulletimItem", {
+                        boletimId: item.id,
+                      });
+                    } else {
+                      navigation.navigate("ClassificatorItem", {
+                        classificadorId: item.id,
+                      });
+                    }
                   }}
                 >
                   <Text style={style.itemTitle}>{item.titulo}</Text>
