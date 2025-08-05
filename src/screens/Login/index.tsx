@@ -2,11 +2,13 @@ import { FontAwesome, Ionicons, Octicons } from "@expo/vector-icons";
 import { DrawerScreenProps } from "@react-navigation/drawer";
 import axios from "axios";
 import { Image as ExpoImage } from "expo-image";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
+  Modal,
   Text,
   TextInput,
   TouchableOpacity,
@@ -17,7 +19,7 @@ import { Container } from "../../components/Container";
 import CustomIconButton from "../../components/CustomIconButton";
 import { BASE_API_USER } from "../../constants/api";
 import Colors from "../../constants/Colors";
-import { AuthContext } from "../../contexts/AuthenticationContext";
+import { useAuth } from "../../contexts/AuthenticationContext";
 import { getUser, updateUser } from "../../lib/storage/userStorage";
 import { RootListType } from "../../navigation/root";
 import styles from "./styles";
@@ -25,13 +27,15 @@ import styles from "./styles";
 type Props = DrawerScreenProps<RootListType, "LogIn">;
 
 const LoginScreen = ({ navigation }: Props) => {
-  const authContext = useContext(AuthContext);
+  const authContext = useAuth();
   const [loading, setLoading] = useState<boolean>(false);
 
   const [user, setUser] = useState<string>("");
 
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
+
+  const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
 
   useEffect(() => {
     if (authContext.isLoggedIn) {
@@ -56,11 +60,15 @@ const LoginScreen = ({ navigation }: Props) => {
       //Pegar o deviceKey no AsyncStorage
       const parsedValue = await getUser();
 
-      const authenticationResponse = await axios.post(BASE_API_USER, {
-        uuid: parsedValue.deviceKey,
-        login: user,
-        senha: password,
-      });
+      const authenticationResponse = await axios.post(
+        BASE_API_USER,
+        {
+          uuid: parsedValue.deviceKey,
+          login: user,
+          senha: password,
+        },
+        { timeout: 20000 }
+      );
 
       if (authenticationResponse.data.success) {
         await updateUser({
@@ -68,7 +76,7 @@ const LoginScreen = ({ navigation }: Props) => {
         });
 
         //Fazer o login no contexto
-        authContext.login();
+        authContext.login(authenticationResponse.data.data.credential);
         navigation.navigate("Home");
       } else {
         Alert.alert(
@@ -82,7 +90,21 @@ const LoginScreen = ({ navigation }: Props) => {
       setLoading(false);
     } catch (error: any) {
       setLoading(false);
-      console.warn(error.message);
+
+      if (error.code === "ECONNABORTED") {
+        Alert.alert(
+          "Erro de conexão",
+          "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+        );
+      } else {
+        Alert.alert(
+          "Erro",
+          "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+        );
+      }
+
+      console.warn("Erro no initialSetUp:", error.message);
+      return;
     }
   };
 
@@ -187,10 +209,11 @@ const LoginScreen = ({ navigation }: Props) => {
             style={styles.forgotView}
             duration={3000}
           >
-            <Text style={styles.forgotText}>Esqueceu a senha? </Text>
+            <Text style={styles.forgotText}>Não tem uma conta? </Text>
             <TouchableOpacity
               onPress={() => {
-                navigation.navigate("RetrievePassword");
+                // navigation.navigate("RetrievePassword");
+                setIsModalVisible(true);
               }}
             >
               <Text
@@ -205,6 +228,45 @@ const LoginScreen = ({ navigation }: Props) => {
           </Animatable.View>
         </KeyboardAvoidingView>
       )}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalText}>
+              Para solicitar uma conta, por favor entre em contato com nossa
+              central do assinante:
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                Linking.openURL("tel:+551129590220");
+              }}
+            >
+              <Text style={styles.modalText}>Telefone: (11) 2959-0220</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                Linking.openURL("mailto:faleconosco@inrpublicacoes.com.br");
+              }}
+            >
+              <Text style={[styles.modalText, { color: Colors.primary.title }]}>
+                faleconosco@inrpublicacoes.com.br
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setIsModalVisible(false)}
+            >
+              <Text style={styles.buttonText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </Container>
   );
 };

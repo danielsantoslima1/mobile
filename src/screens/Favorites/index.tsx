@@ -2,11 +2,11 @@ import { DrawerNavigationProp } from "@react-navigation/drawer";
 import { useIsFocused } from "@react-navigation/native";
 import axios from "axios";
 import { Image as ExpoImage } from "expo-image";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { Container } from "../../components/Container";
 import { BASE_API_GET_FAVORITES } from "../../constants/api";
-import { AuthContext } from "../../contexts/AuthenticationContext";
+import { useAuth } from "../../contexts/AuthenticationContext";
 import { getUser } from "../../lib/storage/userStorage";
 import { RootListType } from "../../navigation/root";
 import { style } from "./style";
@@ -21,7 +21,7 @@ interface favoritesScreenProps {
 }
 
 const BulletinsScreen = ({ navigation }: favoritesScreenProps) => {
-  const authContext = useContext(AuthContext);
+  const authContext = useAuth();
   const isFocused = useIsFocused();
   const [favoritesList, setFavoritesList] = useState<any[]>([]);
   const [page, setPage] = useState<number>(0);
@@ -45,12 +45,12 @@ const BulletinsScreen = ({ navigation }: favoritesScreenProps) => {
           `${BASE_API_GET_FAVORITES}`,
           bulletimObj,
           {
+            timeout: 20000,
             headers: {
               credential: user.userToken,
             },
           }
         );
-        console.log("favorites", favorites.data.data);
 
         if (favorites.data.success) {
           setFavoritesList(() => [...favorites.data.data.list]);
@@ -58,7 +58,21 @@ const BulletinsScreen = ({ navigation }: favoritesScreenProps) => {
         setLoading(false);
       } catch (error: any) {
         setLoading(false);
-        console.warn(error.message);
+
+        if (error.code === "ECONNABORTED") {
+          Alert.alert(
+            "Erro de conexão",
+            "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+          );
+        } else {
+          Alert.alert(
+            "Erro",
+            "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+          );
+        }
+
+        console.warn("Erro no initialSetUp:", error.message);
+        return;
       }
     };
 
@@ -71,40 +85,63 @@ const BulletinsScreen = ({ navigation }: favoritesScreenProps) => {
   }, [isFocused]);
 
   const loadMoreFavorites = async () => {
-    const newPage = page + 1;
-    const user = await getUser();
+    try {
+      const newPage = page + 1;
+      const user = await getUser();
 
-    if (!user.userToken) {
-      Alert.alert("Erro!", "Por favor, clique no botão Entrar para continuar.");
-      return;
-    }
-
-    const favoritesObj = {
-      numero: null,
-      boletim_tipo_id: [3],
-      data: null,
-      limite: 2,
-      pagina: newPage,
-    };
-    const boletins = await axios.post(
-      `${BASE_API_GET_FAVORITES}`,
-      favoritesObj,
-      {
-        headers: {
-          credential: user.userToken,
-        },
+      if (!user.userToken) {
+        Alert.alert(
+          "Erro!",
+          "Por favor, clique no botão Entrar para continuar."
+        );
+        return;
       }
-    );
-    if (boletins.data.success) {
-      const newBulletins = boletins.data.data.list;
 
-      const filteredBulletins = newBulletins.filter(
-        (novo: any) => !favoritesList.some((item) => item.id === novo.id)
+      const favoritesObj = {
+        numero: null,
+        boletim_tipo_id: [3],
+        data: null,
+        limite: 2,
+        pagina: newPage,
+      };
+      const boletins = await axios.post(
+        `${BASE_API_GET_FAVORITES}`,
+        favoritesObj,
+        {
+          timeout: 20000,
+          headers: {
+            credential: user.userToken,
+          },
+        }
       );
+      if (boletins.data.success) {
+        const newBulletins = boletins.data.data.list;
 
-      setFavoritesList((prev) => [...prev, ...filteredBulletins]);
+        const filteredBulletins = newBulletins.filter(
+          (novo: any) => !favoritesList.some((item) => item.id === novo.id)
+        );
 
-      setPage(newPage);
+        setFavoritesList((prev) => [...prev, ...filteredBulletins]);
+
+        setPage(newPage);
+      }
+    } catch (error: any) {
+      setLoading(false);
+
+      if (error.code === "ECONNABORTED") {
+        Alert.alert(
+          "Erro de conexão",
+          "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+        );
+      } else {
+        Alert.alert(
+          "Erro",
+          "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+        );
+      }
+
+      console.warn("Erro no initialSetUp:", error.message);
+      return;
     }
   };
 

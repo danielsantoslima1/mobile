@@ -2,14 +2,14 @@ import { DrawerNavigationProp } from "@react-navigation/drawer";
 import { useIsFocused } from "@react-navigation/native";
 import axios from "axios";
 import { Image } from "expo-image";
-import { useContext, useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { Container } from "../../components/Container";
 import {
   BASE_API_BULLETINS_NOT_LOGGED,
   BASE_API_GET_FAVORITES,
 } from "../../constants/api";
-import { AuthContext } from "../../contexts/AuthenticationContext";
+import { useAuth } from "../../contexts/AuthenticationContext";
 import { getUser } from "../../lib/storage/userStorage";
 import { RootListType } from "../../navigation/root";
 import { style } from "./style";
@@ -21,7 +21,7 @@ interface homeScreenProps {
 }
 
 const HomeScreen = ({ navigation }: homeScreenProps) => {
-  const authContext = useContext(AuthContext);
+  const authContext = useAuth();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [favoritos, setFavoritos] = useState<any[]>([]);
@@ -63,7 +63,8 @@ const HomeScreen = ({ navigation }: homeScreenProps) => {
           };
           const ultimosBoletins = await axios.post(
             `${BASE_API_BULLETINS_NOT_LOGGED}`,
-            lastObj
+            lastObj,
+            { timeout: 20000 }
           );
 
           if (ultimosBoletins.data.success) {
@@ -93,6 +94,7 @@ const HomeScreen = ({ navigation }: homeScreenProps) => {
               BASE_API_GET_FAVORITES,
               searchObj,
               {
+                timeout: 20000,
                 headers: {
                   credential: parsedValue.userToken,
                 },
@@ -107,7 +109,21 @@ const HomeScreen = ({ navigation }: homeScreenProps) => {
         setLoading(false);
       } catch (error: any) {
         setLoading(false);
-        console.warn(error.message);
+
+        if (error.code === "ECONNABORTED") {
+          Alert.alert(
+            "Erro de conexão",
+            "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+          );
+        } else {
+          Alert.alert(
+            "Erro",
+            "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+          );
+        }
+
+        console.warn("Erro no initialSetUp:", error.message);
+        return;
       }
     };
 
@@ -158,18 +174,9 @@ const HomeScreen = ({ navigation }: homeScreenProps) => {
                 <TouchableOpacity
                   style={style.itemTouchable}
                   onPress={() => {
-                    // if (item.titulo.includes("Classificadores")) {
-                    //   navigation.navigate("ClassificatorItem", {
-                    //     classificadorId: item.id,
-                    //   });
-                    // } else {
-                    //   navigation.navigate("BulletimItem", {
-                    //     boletimId: item.id,
-                    //   });
-                    // }
                     if (
                       item.boletim_tipo_id === 1 ||
-                      item.item.boletim_tipo_id === 2
+                      item.boletim_tipo_id === 2
                     ) {
                       navigation.navigate("BulletimItem", {
                         boletimId: item.id,

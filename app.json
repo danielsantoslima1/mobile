@@ -2,35 +2,30 @@
   "expo": {
     "name": "Leitor INR",
     "slug": "leitor-inr",
-    "version": "0.3.0",
+    "version": "1.1.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/store_icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splashscreen_logo.png",
+      "backgroundColor": "#ffffff",
       "resizeMode": "cover"
     },
-    "ios": {
-      "supportsTablet": true,
-      "buildNumber": "3",
-      "bundleIdentifier": "com.inrdev.leitorinr",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "NSUserTrackingUsageDescription": "Este identificador será usado para enviar notificações.",
-        "UIBackgroundModes": ["remote-notification"]
-      }
-    },
     "android": {
+      "package": "com.inrdev.leitorinr",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "package": "com.inrdev.leitorinr",
-      "permissions": ["NOTIFICATIONS"]
+      }
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "ios": {
+      "bundleIdentifier": "com.inrdev.leitorinr",
+      "buildNumber": "5",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "extra": {
       "eas": {

@@ -3,9 +3,10 @@ import { DrawerScreenProps } from "@react-navigation/drawer";
 import { RouteProp, useIsFocused, useRoute } from "@react-navigation/native";
 import axios from "axios";
 import { Image as ExpoImage } from "expo-image";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
+  Dimensions,
   Image,
   ScrollView,
   Text,
@@ -15,7 +16,7 @@ import {
 import ClickableItem from "../../components/ClickableItem";
 import { Container } from "../../components/Container";
 import Colors from "../../constants/Colors";
-import { AuthContext } from "../../contexts/AuthenticationContext";
+import { useAuth } from "../../contexts/AuthenticationContext";
 import { getUser } from "../../lib/storage/userStorage";
 import { RootListType } from "../../navigation/root";
 import styles from "./styles";
@@ -34,7 +35,7 @@ const BulletimItem = ({ navigation }: Props) => {
   const [loading, setLoading] = useState<boolean>();
 
   const isFocused = useIsFocused();
-  const authContext = useContext(AuthContext);
+  const authContext = useAuth();
 
   useEffect(() => {
     const initialSetup = async () => {
@@ -42,7 +43,8 @@ const BulletimItem = ({ navigation }: Props) => {
         setLoading(true);
         if (!authContext.isLoggedIn) {
           const apiResponse = await axios.get(
-            `https://api.publicacoesinr.com.br/leitor/ler/publico?id=${boletimId}`
+            `https://api.publicacoesinr.com.br/leitor/ler/publico?id=${boletimId}`,
+            { timeout: 20000 }
           );
 
           setBoletim(() => apiResponse.data.data);
@@ -52,6 +54,7 @@ const BulletimItem = ({ navigation }: Props) => {
           const apiResponse = await axios.get(
             `https://api.publicacoesinr.com.br/leitor/ler/privado?id=${boletimId}`,
             {
+              timeout: 20000,
               headers: {
                 credential: storedUser.userToken,
               },
@@ -64,9 +67,10 @@ const BulletimItem = ({ navigation }: Props) => {
               favorito: apiResponse.data.data.favorito,
             }));
 
-            const readResponse = await axios.get(
+            await axios.get(
               `https://api.publicacoesinr.com.br/leitor/leitura/${apiResponse.data.data.id}/adicionar`,
               {
+                timeout: 20000,
                 headers: {
                   credential: storedUser.userToken,
                 },
@@ -79,7 +83,21 @@ const BulletimItem = ({ navigation }: Props) => {
         setLoading(false);
       } catch (error: any) {
         setLoading(false);
-        console.warn(error.message);
+
+        if (error.code === "ECONNABORTED") {
+          Alert.alert(
+            "Erro de conexão",
+            "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+          );
+        } else {
+          Alert.alert(
+            "Erro",
+            "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+          );
+        }
+
+        console.warn("Erro no initialSetUp:", error.message);
+        return;
       }
     };
     initialSetup();
@@ -144,9 +162,10 @@ const BulletimItem = ({ navigation }: Props) => {
 
     try {
       if (boletim.lido) {
-        const readResponse = await axios.delete(
+        await axios.delete(
           `https://api.publicacoesinr.com.br/leitor/leitura/${boletim.id}/remover`,
           {
+            timeout: 20000,
             headers: {
               credential: user.userToken,
             },
@@ -155,9 +174,10 @@ const BulletimItem = ({ navigation }: Props) => {
         setBoletim((prev: any) => ({ ...prev, lido: false }));
         Alert.alert("Atenção", "Boletim marcado como não lido");
       } else {
-        const readResponse = await axios.get(
+        await axios.get(
           `https://api.publicacoesinr.com.br/leitor/leitura/${boletim.id}/adicionar`,
           {
+            timeout: 20000,
             headers: {
               credential: user.userToken,
             },
@@ -166,8 +186,24 @@ const BulletimItem = ({ navigation }: Props) => {
         setBoletim((prev: any) => ({ ...prev, lido: true }));
         Alert.alert("Atenção", "Boletim marcado como lido");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.warn("Erro ao registrar leitura:", error);
+      setLoading(false);
+
+      if (error.code === "ECONNABORTED") {
+        Alert.alert(
+          "Erro de conexão",
+          "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+        );
+      } else {
+        Alert.alert(
+          "Erro",
+          "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+        );
+      }
+
+      console.warn("Erro no initialSetUp:", error.message);
+      return;
     }
   };
 
@@ -182,6 +218,7 @@ const BulletimItem = ({ navigation }: Props) => {
         const readResponse = await axios.get(
           `https://api.publicacoesinr.com.br/leitor/favorito/${boletim.id}/adicionar`,
           {
+            timeout: 20000,
             headers: {
               credential: user.userToken,
             },
@@ -195,6 +232,7 @@ const BulletimItem = ({ navigation }: Props) => {
         const readResponse = await axios.delete(
           `https://api.publicacoesinr.com.br/leitor/favorito/${boletim.id}/remover`,
           {
+            timeout: 20000,
             headers: {
               credential: user.userToken,
             },
@@ -205,9 +243,24 @@ const BulletimItem = ({ navigation }: Props) => {
           Alert.alert("Atenção", "Boletim removido dos favoritos.");
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.warn("Erro ao registrar leitura:", error);
-      Alert.alert("Erro ao favoritar conteúdo. Por favor, tente novamente.");
+      setLoading(false);
+
+      if (error.code === "ECONNABORTED") {
+        Alert.alert(
+          "Erro de conexão",
+          "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+        );
+      } else {
+        Alert.alert(
+          "Erro",
+          "Ocorreu um erro ao carregar os dados. Por favor, tente novamente."
+        );
+      }
+
+      console.warn("Erro no initialSetUp:", error.message);
+      return;
     }
   };
 
@@ -255,7 +308,11 @@ const Section = ({ tipo, items }: { tipo: string; items: any }) => {
     <View style={styles.bannerContainer}>
       <Image
         source={imagesMap[tipo]}
-        style={{ width: "100%", resizeMode: "contain" }}
+        style={{
+          width: "100%",
+          height: Dimensions.get("window").width * 0.35,
+          resizeMode: "contain",
+        }}
       />
       <View
         style={{
